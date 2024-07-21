@@ -3,11 +3,15 @@ import openai
 import os
 import markdown2
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
+
+# 로깅 설정
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/')
 def home():
@@ -26,6 +30,7 @@ def loading():
 @app.route('/process', methods=['POST'])
 def process():
     idea = request.form['idea']
+    logging.debug(f"Idea received: {idea}")
     prompt = f"""
     사업 아이디어를 검증하기 위해 다음의 질문들에 대한 분석을 수행해주세요.
 
@@ -63,7 +68,7 @@ def process():
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini",  # 올바른 모델명을 사용하세요.
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
@@ -73,18 +78,23 @@ def process():
         result = response['choices'][0]['message']['content'].strip()
         html_result = markdown2.markdown(result)
     except openai.error.OpenAIError as e:
-        print(f"API error: {e}")
+        logging.error(f"API error: {e}")
         return jsonify({"error": "API error, please try again later"}), 500
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
         return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
 
     return jsonify({"result": html_result})
 
-@app.route('/result', methods=['POST'])
+@app.route('/result', methods=['GET'])
 def result():
-    result = request.form['result']
+    result = request.args.get('result')
     return render_template('result.html', result=result)
+
+@app.route('/test_api_key')
+def test_api_key():
+    api_key = os.getenv("OPENAI_API_KEY")
+    return jsonify({"api_key": api_key})
 
 if __name__ == '__main__':
     app.run(debug=True)
