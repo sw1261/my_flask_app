@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이디어 검증 사이트</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+        <h1>아이디어 검증</h1>
+        <form id="ideaForm" action="/validate_idea" method="post">
+            <textarea name="idea" placeholder="아이디어를 입력하세요"></textarea>
+            <button type="submit">검증하기</button>
+        </form>
+    </div>
+</body>
+</html>

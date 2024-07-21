@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로딩 중...</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>로딩 중<span id="dots"></span></h1>
+        <p>잠시만 기다려주세요.</p>
+    </div>
+    <script>
+        let dots = document.getElementById("dots");
+        let count = 0;
+        setInterval(() => {
+            count = (count + 1) % 5;
+            dots.innerHTML = ".".repeat(count);
+        }, 450);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const idea = urlParams.get('idea');
+
+        function fetchResult() {
+            fetch(`/process?idea=${encodeURIComponent(idea)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        window.location.href = `/result?result=${encodeURIComponent(data.result)}`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        fetchResult();
+    </script>
+</body>
+</html>
