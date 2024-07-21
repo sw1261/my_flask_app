@@ -25,8 +25,7 @@ def loading():
 
 @app.route('/process', methods=['POST'])
 def process():
-    data = request.get_json()
-    idea = data['idea']
+    idea = request.form['idea']
     prompt = f"""
     사업 아이디어를 검증하기 위해 다음의 질문들에 대한 분석을 수행해주세요.
 
@@ -82,9 +81,9 @@ def process():
 
     return jsonify({"result": html_result})
 
-@app.route('/result')
+@app.route('/result', methods=['POST'])
 def result():
-    result = request.args.get('result')
+    result = request.form['result']
     return render_template('result.html', result=result)
 
 if __name__ == '__main__':

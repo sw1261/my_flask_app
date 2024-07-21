@@ -15,7 +15,7 @@
         let dots = document.getElementById("dots");
         let count = 0;
         setInterval(() => {
-            count = (count + 1) % 4 + 1;
+            count = (count + 1) % 5;
             dots.innerHTML = ".".repeat(count);
         }, 450);
 
@@ -23,22 +23,35 @@
         const idea = urlParams.get('idea');
 
         function fetchResult() {
-            fetch(`/process`, {
+            fetch('/process', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ idea: idea })
+                body: new URLSearchParams({
+                    'idea': idea
+                })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    window.location.href = `/result?result=${encodeURIComponent(data.result)}`;
-                }
-            })
-            .catch(error => console.error('Error:', error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '/result';
+
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'result';
+                        input.value = data.result;
+
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
 
         fetchResult();
