@@ -23,9 +23,10 @@ def loading():
     idea = request.args.get('idea')
     return render_template('loading.html', idea=idea)
 
-@app.route('/process', methods=['GET'])
+@app.route('/process', methods=['POST'])
 def process():
-    idea = request.args.get('idea')
+    data = request.get_json()
+    idea = data['idea']
     prompt = f"""
     사업 아이디어를 검증하기 위해 다음의 질문들에 대한 분석을 수행해주세요.
 
@@ -63,7 +64,7 @@ def process():
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}

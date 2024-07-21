@@ -15,7 +15,7 @@
         let dots = document.getElementById("dots");
         let count = 0;
         setInterval(() => {
-            count = (count + 1) % 5;
+            count = (count + 1) % 4 + 1;
             dots.innerHTML = ".".repeat(count);
         }, 450);
 
@@ -23,16 +23,22 @@
         const idea = urlParams.get('idea');
 
         function fetchResult() {
-            fetch(`/process?idea=${encodeURIComponent(idea)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        window.location.href = `/result?result=${encodeURIComponent(data.result)}`;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+            fetch(`/process`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ idea: idea })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    window.location.href = `/result?result=${encodeURIComponent(data.result)}`;
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         fetchResult();
