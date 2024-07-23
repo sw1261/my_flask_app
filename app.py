@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import logging
 from fpdf import FPDF, HTMLMixin
 import time
-from celery import Celery
+from celery_worker import make_celery
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
 
@@ -15,11 +15,7 @@ app.config.update(
     CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL'),
     CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND')
 )
-celery = Celery(
-    app.import_name,
-    backend=app.config['CELERY_RESULT_BACKEND'],
-    broker=app.config['CELERY_BROKER_URL']
-)
+celery = make_celery(app)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
 
