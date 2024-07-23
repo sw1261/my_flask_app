@@ -101,8 +101,13 @@ def process():
 
 @app.route('/result', methods=['POST'])
 def result():
-    result = request.form['result']
-    return render_template('result.html', result=result)
+    try:
+        result = request.form['result']
+        logging.debug(f"Result for rendering: {result}")
+        return render_template('result.html', result=result)
+    except Exception as e:
+        logging.error(f"Error rendering result: {e}")
+        return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
 
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
@@ -113,7 +118,7 @@ def download_pdf():
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, result)
+        pdf.multi_cell(0, 10, result.encode('latin1', 'replace').decode('latin1'))
         
         response = make_response(pdf.output(dest='S').encode('latin1'))
         response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
