@@ -82,7 +82,7 @@ def process():
                     {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=5000
+                max_tokens=4000
             )
             result = response['choices'][0]['message']['content'].strip()
             html_result = markdown2.markdown(result)
