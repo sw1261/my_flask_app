@@ -4,7 +4,7 @@ import os
 import markdown2
 from dotenv import load_dotenv
 import logging
-from fpdf import FPDF
+from fpdf import FPDF, HTMLMixin
 import time
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
@@ -13,6 +13,9 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
 
 logging.basicConfig(level=logging.DEBUG)
+
+class MyFPDF(FPDF, HTMLMixin):
+    pass
 
 @app.route('/')
 def home():
@@ -33,7 +36,9 @@ def process():
     idea = request.form['idea']
     logging.debug(f"Idea received: {idea}")
     prompt = f"""
-    사업 아이디어를 검증하기 위해 다음의 질문들에 대한 분석을 수행해주세요.
+    다음은 사업 아이디어에 대한 분석입니다:
+
+    아이디어: {idea}
 
     1. 시장성 및 타겟 분석
     - 이 아이디어가 진입할 수 있는 시장이 존재합니까? 존재한다면 시장의 규모는 어떻게 됩니까?
@@ -103,8 +108,9 @@ def process():
 def result():
     try:
         result = request.form['result']
+        idea = request.form['idea']
         logging.debug(f"Result for rendering: {result}")
-        return render_template('result.html', result=result)
+        return render_template('result.html', result=result, idea=idea)
     except Exception as e:
         logging.error(f"Error rendering result: {e}")
         return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
@@ -116,10 +122,10 @@ def download_pdf():
         idea = request.form.get('idea', '아이디어 제목 없음')
         logging.debug(f"Result for PDF: {result}")
         
-        pdf = FPDF()
+        pdf = MyFPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
+        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}", border=0)
         
         response = make_response(pdf.output(dest='S').encode('latin1'))
         response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
