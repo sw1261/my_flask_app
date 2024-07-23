@@ -99,9 +99,9 @@ def process():
 
     return jsonify({"result": html_result})
 
-@app.route('/result', methods=['GET'])
+@app.route('/result', methods=['POST'])
 def result():
-    result = request.args.get('result')
+    result = request.form['result']
     return render_template('result.html', result=result)
 
 @app.route('/download_pdf', methods=['GET'])
