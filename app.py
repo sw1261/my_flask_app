@@ -97,7 +97,7 @@ def process():
             logging.error(f"Unexpected error: {e}")
             return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
 
-    return jsonify({"result": html_result})
+    return jsonify({"result": html_result, "idea": idea})
 
 @app.route('/result', methods=['POST'])
 def result():
@@ -113,12 +113,13 @@ def result():
 def download_pdf():
     try:
         result = request.form['result']
+        idea = request.form.get('idea', '아이디어 제목 없음')
         logging.debug(f"Result for PDF: {result}")
         
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, result.encode('latin1', 'replace').decode('latin1'))
+        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
         
         response = make_response(pdf.output(dest='S').encode('latin1'))
         response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')

@@ -17,6 +17,7 @@
         <!-- PDF 다운로드 버튼을 POST 요청으로 변경 -->
         <form method="POST" action="{{ url_for('download_pdf') }}">
             <input type="hidden" name="result" value="{{ result }}">
+            <input type="hidden" name="idea" value="{{ request.args.get('idea', '아이디어 제목 없음') }}">
             <button type="submit">PDF로 다운로드</button>
         </form>
     </div>
