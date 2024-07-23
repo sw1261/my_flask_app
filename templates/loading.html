@@ -33,9 +33,9 @@
                 })
             })
                 .then(response => {
-                    // 응답이 JSON 형식인지 확인
+                    // 응답이 성공적인지 확인
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        throw new Error(`Network response was not ok: ${response.statusText}`);
                     }
                     return response.json();
                 })
