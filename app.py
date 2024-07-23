@@ -104,9 +104,9 @@ def result():
     result = request.form['result']
     return render_template('result.html', result=result)
 
-@app.route('/download_pdf', methods=['GET'])
+@app.route('/download_pdf', methods=['POST'])
 def download_pdf():
-    result = request.args.get('result')
+    result = request.form['result']
     
     pdf = FPDF()
     pdf.add_page()

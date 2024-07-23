@@ -13,7 +13,12 @@
             <div class="result">{{ result|safe }}</div>
         </div>
         <a href="{{ url_for('home') }}">다시 검증하기</a>
-        <a href="{{ url_for('download_pdf', result=result) }}">PDF로 다운로드</a>
+        
+        <!-- PDF 다운로드 버튼을 POST 요청으로 변경 -->
+        <form method="POST" action="{{ url_for('download_pdf') }}">
+            <input type="hidden" name="result" value="{{ result }}">
+            <button type="submit">PDF로 다운로드</button>
+        </form>
     </div>
 </body>
 </html>
