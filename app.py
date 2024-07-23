@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import logging
 from fpdf import FPDF, HTMLMixin
 import time
+import requests
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
 
@@ -98,18 +99,27 @@ def process():
     retries = 3
     for i in range(retries):
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=4000
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {openai.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "gpt-4o",
+                    "messages": [
+                        {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "max_tokens": 4000
+                },
+                timeout=300
             )
-            result = response['choices'][0]['message']['content'].strip()
+            response.raise_for_status()
+            result = response.json()['choices'][0]['message']['content'].strip()
             html_result = markdown2.markdown(result)
             break
-        except openai.error.OpenAIError as e:
+        except requests.exceptions.RequestException as e:
             logging.error(f"API error: {e}")
             if i < retries - 1:
                 time.sleep(2 ** i)  # 재시도 전에 지수적으로 대기
