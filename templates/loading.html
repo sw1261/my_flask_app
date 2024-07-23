@@ -32,13 +32,19 @@
                     'idea': idea
                 })
             })
-                .then(response => response.json())
+                .then(response => {
+                    // 응답이 JSON 형식인지 확인
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.error) {
                         alert(data.error);
                     } else {
                         const form = document.createElement('form');
-                        form.method = 'POST';  // 변경된 부분
+                        form.method = 'POST';
                         form.action = '/result';
 
                         const input = document.createElement('input');
@@ -51,7 +57,10 @@
                         form.submit();
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred: ' + error.message);
+                });
         }
 
         fetchResult();
