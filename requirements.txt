@@ -7,3 +7,4 @@ werkzeug==2.0.3
 fpdf2==2.5.5
 celery==5.2.7
 redis==4.3.4
+requests==2.27.1  # Ensure this is included for making HTTP requests
