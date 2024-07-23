@@ -77,7 +77,7 @@ def process():
     for i in range(retries):
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
                     {"role": "user", "content": prompt}
