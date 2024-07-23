@@ -1,16 +1,17 @@
-from flask import Flask, request, render_template, jsonify, redirect, url_for
+from flask import Flask, request, render_template, jsonify, redirect, url_for, make_response
 import openai
 import os
 import markdown2
 from dotenv import load_dotenv
 import logging
+from fpdf import FPDF
+import time
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
 
-# 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/')
@@ -64,25 +65,37 @@ def process():
     - Fish Bone Diagram에 맞게 데이터를 작성해주세요.
     - Six Thinking Hats 모델을 대입하여 데이터 분석을 해주세요.
     - SWOT 분석을 해주세요.
+
+    9. 사업 계획서 작성
+    - 이 아이디어를 바탕으로 구체적인 사업 계획서를 작성해주세요. 사업의 목표, 전략, 실행 계획, 재무 계획 등을 포함해야 합니다.
+
+    10. 위험 분석
+    - 이 사업 아이디어와 관련된 잠재적 위험 요소를 식별하고, 이를 관리하기 위한 전략을 제안해주세요.
     """
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",  # 올바른 모델명을 사용하세요.
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=1500
-        )
-        result = response['choices'][0]['message']['content'].strip()
-        html_result = markdown2.markdown(result)
-    except openai.error.OpenAIError as e:
-        logging.error(f"API error: {e}")
-        return jsonify({"error": "API error, please try again later"}), 500
-    except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
+    retries = 3
+    for i in range(retries):
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=4000
+            )
+            result = response['choices'][0]['message']['content'].strip()
+            html_result = markdown2.markdown(result)
+            break
+        except openai.error.OpenAIError as e:
+            logging.error(f"API error: {e}")
+            if i < retries - 1:
+                time.sleep(2 ** i)  # 재시도 전에 지수적으로 대기
+            else:
+                return jsonify({"error": f"API error, please try again later: {e}"}), 500
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
 
     return jsonify({"result": html_result})
 
@@ -90,6 +103,20 @@ def process():
 def result():
     result = request.args.get('result')
     return render_template('result.html', result=result)
+
+@app.route('/download_pdf', methods=['GET'])
+def download_pdf():
+    result = request.args.get('result')
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, result)
+    
+    response = make_response(pdf.output(dest='S').encode('latin1'))
+    response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
+    response.headers.set('Content-Type', 'application/pdf')
+    return response
 
 @app.route('/test_api_key')
 def test_api_key():

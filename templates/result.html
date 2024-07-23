@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +13,7 @@
             <div class="result">{{ result|safe }}</div>
         </div>
         <a href="{{ url_for('home') }}">다시 검증하기</a>
+        <a href="{{ url_for('download_pdf', result=result) }}">PDF로 다운로드</a>
     </div>
 </body>
 </html>
