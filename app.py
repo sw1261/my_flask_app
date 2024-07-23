@@ -6,11 +6,21 @@ from dotenv import load_dotenv
 import logging
 from fpdf import FPDF, HTMLMixin
 import time
-import requests
+from celery import Celery
 
 load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
 
 app = Flask(__name__)
+app.config.update(
+    CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL'),
+    CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND')
+)
+celery = Celery(
+    app.import_name,
+    backend=app.config['CELERY_RESULT_BACKEND'],
+    broker=app.config['CELERY_BROKER_URL']
+)
+
 openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
 
 logging.basicConfig(level=logging.DEBUG)
@@ -42,16 +52,60 @@ def home():
 @app.route('/validate_idea', methods=['POST'])
 def validate_idea():
     idea = request.form['idea']
-    return redirect(url_for('loading', idea=idea))
+    task = process_idea.apply_async(args=[idea])
+    return redirect(url_for('loading', task_id=task.id))
 
 @app.route('/loading')
 def loading():
-    idea = request.args.get('idea')
-    return render_template('loading.html', idea=idea)
+    task_id = request.args.get('task_id')
+    return render_template('loading.html', task_id=task_id)
 
-@app.route('/process', methods=['POST'])
-def process():
-    idea = request.form['idea']
+@app.route('/process/<task_id>', methods=['GET'])
+def process(task_id):
+    task = process_idea.AsyncResult(task_id)
+    if task.state == 'SUCCESS':
+        return jsonify(task.result)
+    else:
+        return jsonify({'state': task.state})
+
+@app.route('/result', methods=['POST'])
+def result():
+    try:
+        result = request.form['result']
+        idea = request.form['idea']
+        logging.debug(f"Result for rendering: {result}")
+        return render_template('result.html', result=result, idea=idea)
+    except Exception as e:
+        logging.error(f"Error rendering result: {e}")
+        return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
+
+@app.route('/download_pdf', methods=['POST'])
+def download_pdf():
+    try:
+        result = request.form['result']
+        idea = request.form.get('idea', '아이디어 제목 없음')
+        logging.debug(f"Result for PDF: {result}")
+        
+        pdf = MyFPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
+        
+        response = make_response(pdf.output(dest='S').encode('latin1'))
+        response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
+        response.headers.set('Content-Type', 'application/pdf')
+        return response
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        return jsonify({"error": f"Error generating PDF: {str(e)}"}), 500
+
+@app.route('/test_api_key')
+def test_api_key():
+    api_key = os.getenv("OPENAI_API_KEY")
+    return jsonify({"api_key": api_key})
+
+@celery.task
+def process_idea(idea):
     logging.debug(f"Idea received: {idea}")
     prompt = f"""
     다음은 사업 아이디어에 대한 분석입니다:
@@ -124,48 +178,12 @@ def process():
             if i < retries - 1:
                 time.sleep(2 ** i)  # 재시도 전에 지수적으로 대기
             else:
-                return jsonify({"error": f"API error, please try again later: {e}"}), 500
+                return {"error": f"API error, please try again later: {e}"}
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
-            return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
+            return {"error": f"Unexpected error occurred: {str(e)}"}
 
-    return jsonify({"result": html_result, "idea": idea})
-
-@app.route('/result', methods=['POST'])
-def result():
-    try:
-        result = request.form['result']
-        idea = request.form['idea']
-        logging.debug(f"Result for rendering: {result}")
-        return render_template('result.html', result=result, idea=idea)
-    except Exception as e:
-        logging.error(f"Error rendering result: {e}")
-        return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
-
-@app.route('/download_pdf', methods=['POST'])
-def download_pdf():
-    try:
-        result = request.form['result']
-        idea = request.form.get('idea', '아이디어 제목 없음')
-        logging.debug(f"Result for PDF: {result}")
-        
-        pdf = MyFPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
-        
-        response = make_response(pdf.output(dest='S').encode('latin1'))
-        response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
-        response.headers.set('Content-Type', 'application/pdf')
-        return response
-    except Exception as e:
-        logging.error(f"Error generating PDF: {e}")
-        return jsonify({"error": f"Error generating PDF: {str(e)}"}), 500
-
-@app.route('/test_api_key')
-def test_api_key():
-    api_key = os.getenv("OPENAI_API_KEY")
-    return jsonify({"api_key": api_key})
+    return {"result": html_result, "idea": idea}
 
 if __name__ == '__main__':
     app.run(debug=True)
