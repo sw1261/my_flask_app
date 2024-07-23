@@ -38,7 +38,7 @@
                         alert(data.error);
                     } else {
                         const form = document.createElement('form');
-                        form.method = 'POST';
+                        form.method = 'GET';  // 변경된 부분
                         form.action = '/result';
 
                         const input = document.createElement('input');
