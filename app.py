@@ -15,7 +15,24 @@ openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 �
 logging.basicConfig(level=logging.DEBUG)
 
 class MyFPDF(FPDF, HTMLMixin):
-    pass
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, '아이디어 검증 결과', 0, 1, 'C')
+
+    def chapter_title(self, title):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, title, 0, 1, 'L')
+        self.ln(10)
+
+    def chapter_body(self, body):
+        self.set_font('Arial', '', 12)
+        self.multi_cell(0, 10, body)
+        self.ln()
+
+    def add_chapter(self, title, body):
+        self.add_page()
+        self.chapter_title(title)
+        self.chapter_body(body)
 
 @app.route('/')
 def home():
@@ -125,7 +142,7 @@ def download_pdf():
         pdf = MyFPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}", border=0)
+        pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
         
         response = make_response(pdf.output(dest='S').encode('latin1'))
         response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
