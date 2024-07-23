@@ -106,17 +106,22 @@ def result():
 
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
-    result = request.form['result']
-    
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, result)
-    
-    response = make_response(pdf.output(dest='S').encode('latin1'))
-    response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
-    response.headers.set('Content-Type', 'application/pdf')
-    return response
+    try:
+        result = request.form['result']
+        logging.debug(f"Result for PDF: {result}")
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.multi_cell(0, 10, result)
+        
+        response = make_response(pdf.output(dest='S').encode('latin1'))
+        response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
+        response.headers.set('Content-Type', 'application/pdf')
+        return response
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        return jsonify({"error": f"Error generating PDF: {str(e)}"}), 500
 
 @app.route('/test_api_key')
 def test_api_key():
