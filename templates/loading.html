@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,52 +15,51 @@
         let dots = document.getElementById("dots");
         let count = 0;
         setInterval(() => {
-            count = (count + 1) % 5;
+            count = (count + 1) % 4;
             dots.innerHTML = ".".repeat(count);
         }, 450);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const idea = urlParams.get('idea');
+        const task_id = urlParams.get('task_id');
 
         function fetchResult() {
-            fetch('/process', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'idea': idea
-                })
+            fetch(`/process/${task_id}`, {
+                method: 'GET'
             })
-                .then(response => {
-                    // 응답이 성공적인지 확인
-                    if (!response.ok) {
-                        throw new Error(`Network response was not ok: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/result';
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.state === 'SUCCESS') {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/result';
 
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'result';
-                        input.value = data.result;
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'result';
+                    input.value = data.result; // Correctly set the value
 
-                        form.appendChild(input);
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred: ' + error.message);
-                });
+                    const ideaInput = document.createElement('input');
+                    ideaInput.type = 'hidden';
+                    ideaInput.name = 'idea';
+                    ideaInput.value = data.idea; // Correctly set the value
+
+                    form.appendChild(input);
+                    form.appendChild(ideaInput);
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    setTimeout(fetchResult, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred: ' + error.message);
+            });
         }
 
         fetchResult();

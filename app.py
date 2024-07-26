@@ -2,25 +2,34 @@ from flask import Flask, request, render_template, jsonify, redirect, url_for, m
 import openai
 import os
 import markdown2
-from dotenv import load_dotenv
 import logging
+from dotenv import load_dotenv
 from fpdf import FPDF, HTMLMixin
 import time
 from celery_worker import make_celery
+import requests
+from mytasks import process_idea  # Import the task
 
-load_dotenv()  # .env 파일의 환경 변수를 로드합니다.
+# 환경변수 로드
+load_dotenv()
 
+# Flask 애플리케이션 설정
 app = Flask(__name__)
 app.config.update(
-    CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL'),
-    CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND')
+    broker_url=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+    result_backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 )
 celery = make_celery(app)
+celery.conf.update(app.config)
+celery.conf.task_default_queue = 'default'
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # 환경 변수에서 API 키를 불러옵니다.
+# OpenAI API 키 설정
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 
+# PDF 클래스 정의
 class MyFPDF(FPDF, HTMLMixin):
     def header(self):
         self.set_font('Arial', 'B', 12)
@@ -41,29 +50,37 @@ class MyFPDF(FPDF, HTMLMixin):
         self.chapter_title(title)
         self.chapter_body(body)
 
+# 홈 페이지 라우트
 @app.route('/')
 def home():
     return render_template('index.html')
 
+# 아이디어 검증 라우트
 @app.route('/validate_idea', methods=['POST'])
 def validate_idea():
     idea = request.form['idea']
-    task = process_idea.apply_async(args=[idea])
+    task = process_idea.apply_async(args=[idea])  # Call the task
     return redirect(url_for('loading', task_id=task.id))
 
+# 로딩 페이지 라우트
 @app.route('/loading')
 def loading():
     task_id = request.args.get('task_id')
     return render_template('loading.html', task_id=task_id)
 
-@app.route('/process/<task_id>', methods=['GET'])
+# 작업 상태 조회 라우트
+@app.route('/process/<task_id>', methods=['POST', 'GET'])
 def process(task_id):
     task = process_idea.AsyncResult(task_id)
+    logging.debug(f"Task status: {task.state}")
     if task.state == 'SUCCESS':
+        logging.debug(f"Task result: {task.result}")
         return jsonify(task.result)
     else:
+        logging.debug(f"Current task state: {task.state}")
         return jsonify({'state': task.state})
 
+# 결과 렌더링 라우트
 @app.route('/result', methods=['POST'])
 def result():
     try:
@@ -75,18 +92,19 @@ def result():
         logging.error(f"Error rendering result: {e}")
         return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
 
+# PDF 다운로드 라우트
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
     try:
         result = request.form['result']
         idea = request.form.get('idea', '아이디어 제목 없음')
         logging.debug(f"Result for PDF: {result}")
-        
+
         pdf = MyFPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         pdf.multi_cell(0, 10, f"아이디어 제목: {idea}\n\n{result}")
-        
+
         response = make_response(pdf.output(dest='S').encode('latin1'))
         response.headers.set('Content-Disposition', 'attachment', filename='result.pdf')
         response.headers.set('Content-Type', 'application/pdf')
@@ -95,12 +113,14 @@ def download_pdf():
         logging.error(f"Error generating PDF: {e}")
         return jsonify({"error": f"Error generating PDF: {str(e)}"}), 500
 
+# OpenAI API 키 테스트 라우트
 @app.route('/test_api_key')
 def test_api_key():
     api_key = os.getenv("OPENAI_API_KEY")
     return jsonify({"api_key": api_key})
 
-@celery.task
+# Celery 작업 정의
+@celery.task(name="mytasks.process_idea")
 def process_idea(idea):
     logging.debug(f"Idea received: {idea}")
     prompt = f"""
@@ -156,7 +176,7 @@ def process_idea(idea):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "gpt-4o",
+                    "model": "gpt-4o-mini-2024-07-18",
                     "messages": [
                         {"role": "system", "content": "당신은 도움이 되는 조수입니다."},
                         {"role": "user", "content": prompt}
@@ -172,7 +192,7 @@ def process_idea(idea):
         except requests.exceptions.RequestException as e:
             logging.error(f"API error: {e}")
             if i < retries - 1:
-                time.sleep(2 ** i)  # 재시도 전에 지수적으로 대기
+                time.sleep(2 ** i)
             else:
                 return {"error": f"API error, please try again later: {e}"}
         except Exception as e:
@@ -181,5 +201,6 @@ def process_idea(idea):
 
     return {"result": html_result, "idea": idea}
 
+# Flask 애플리케이션 실행
 if __name__ == '__main__':
     app.run(debug=True)
