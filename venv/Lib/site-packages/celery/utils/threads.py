@@ -11,17 +11,17 @@ from celery.local import Proxy
 
 try:
     from greenlet import getcurrent as get_ident
-except ImportError:  # pragma: no cover
+except ImportError:
     try:
-        from _thread import get_ident  # noqa
+        from _thread import get_ident
     except ImportError:
         try:
-            from thread import get_ident  # noqa
-        except ImportError:  # pragma: no cover
+            from thread import get_ident
+        except ImportError:
             try:
-                from _dummy_thread import get_ident  # noqa
+                from _dummy_thread import get_ident
             except ImportError:
-                from dummy_thread import get_ident  # noqa
+                from dummy_thread import get_ident
 
 
 __all__ = (
@@ -282,7 +282,7 @@ class LocalManager:
     def get_ident(self):
         """Return context identifier.
 
-        This is the indentifer the local objects use internally
+        This is the identifier the local objects use internally
         for this context.  You cannot override this method to change the
         behavior but use it to link other context local objects (such as
         SQLAlchemy's scoped sessions) to the Werkzeug locals.
@@ -328,4 +328,4 @@ else:  # pragma: no cover
     # since each thread has its own greenlet we can just use those as
     # identifiers for the context.  If greenlets aren't available we
     # fall back to the  current thread ident.
-    LocalStack = _LocalStack  # noqa
+    LocalStack = _LocalStack

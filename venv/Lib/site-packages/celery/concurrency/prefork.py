@@ -41,6 +41,8 @@ def process_initializer(app, hostname):
     Initialize the child pool process to ensure the correct
     app instance is used and things like logging works.
     """
+    # Each running worker gets SIGKILL by OS when main process exits.
+    platforms.set_pdeathsig('SIGKILL')
     _set_task_join_will_block(True)
     platforms.signals.reset(*WORKER_SIGRESET)
     platforms.signals.ignore(*WORKER_SIGIGNORE)
@@ -153,7 +155,8 @@ class TaskPool(BasePool):
 
     def _get_info(self):
         write_stats = getattr(self._pool, 'human_write_stats', None)
-        return {
+        info = super()._get_info()
+        info.update({
             'max-concurrency': self.limit,
             'processes': [p.pid for p in self._pool._pool],
             'max-tasks-per-child': self._pool._maxtasksperchild or 'N/A',
@@ -161,7 +164,8 @@ class TaskPool(BasePool):
             'timeouts': (self._pool.soft_timeout or 0,
                          self._pool.timeout or 0),
             'writes': write_stats() if write_stats is not None else 'N/A',
-        }
+        })
+        return info
 
     @property
     def num_processes(self):

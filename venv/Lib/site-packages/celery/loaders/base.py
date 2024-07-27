@@ -12,8 +12,7 @@ from celery import signals
 from celery.exceptions import reraise
 from celery.utils.collections import DictAttribute, force_mapping
 from celery.utils.functional import maybe_list
-from celery.utils.imports import (NotAPackage, find_module, import_from_cwd,
-                                  symbol_by_name)
+from celery.utils.imports import NotAPackage, find_module, import_from_cwd, symbol_by_name
 
 __all__ = ('BaseLoader',)
 
@@ -126,6 +125,8 @@ class BaseLoader:
                     return False
                 raise
         self._conf = force_mapping(obj)
+        if self._conf.get('override_backends') is not None:
+            self.override_backends = self._conf['override_backends']
         return True
 
     def _smart_import(self, path, imp=None):
@@ -249,7 +250,7 @@ def autodiscover_tasks(packages, related_name='tasks'):
 
 def find_related_module(package, related_name):
     """Find module in package."""
-    # Django 1.7 allows for speciying a class name in INSTALLED_APPS.
+    # Django 1.7 allows for specifying a class name in INSTALLED_APPS.
     # (Issue #2248).
     try:
         module = importlib.import_module(package)

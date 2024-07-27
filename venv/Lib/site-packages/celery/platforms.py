@@ -13,10 +13,10 @@ import platform as _platform
 import signal as _signal
 import sys
 import warnings
-from collections import namedtuple
 from contextlib import contextmanager
 
 from billiard.compat import close_open_fds, get_fdmax
+from billiard.util import set_pdeathsig as _set_pdeathsig
 # fileno used to be in this module
 from kombu.utils.compat import maybe_fileno
 from kombu.utils.encoding import safe_str
@@ -26,7 +26,7 @@ from .local import try_import
 
 try:
     from billiard.process import current_process
-except ImportError:  # pragma: no cover
+except ImportError:
     current_process = None
 
 _setproctitle = try_import('setproctitle')
@@ -42,7 +42,7 @@ __all__ = (
     'DaemonContext', 'detached', 'parse_uid', 'parse_gid', 'setgroups',
     'initgroups', 'setgid', 'setuid', 'maybe_drop_privileges', 'signals',
     'signal_name', 'set_process_title', 'set_mp_process_title',
-    'get_errno_name', 'ignore_errno', 'fd_by_path', 'isatty',
+    'get_errno_name', 'ignore_errno', 'fd_by_path',
 )
 
 # exitcodes
@@ -63,8 +63,6 @@ PIDFILE_MODE = ((os.R_OK | os.W_OK) << 6) | ((os.R_OK) << 3) | (os.R_OK)
 
 PIDLOCKED = """ERROR: Pidfile ({0}) already exists.
 Seems we're already running? (pid: {1})"""
-
-_range = namedtuple('_range', ('start', 'stop'))
 
 ROOT_DISALLOWED = """\
 Running a worker with superuser privileges when the
@@ -95,14 +93,6 @@ SIGNAMES = {
     if sig.startswith('SIG') and '_' not in sig
 }
 SIGMAP = {getattr(_signal, name): name for name in SIGNAMES}
-
-
-def isatty(fh):
-    """Return true if the process has a controlling terminal."""
-    try:
-        return fh.isatty()
-    except AttributeError:
-        pass
 
 
 def pyimplementation():
@@ -185,7 +175,7 @@ class Pidfile:
     def remove_if_stale(self):
         """Remove the lock if the process isn't running.
 
-        I.e. process does not respons to signal.
+        I.e. process does not respond to signal.
         """
         try:
             pid = self.read_pid()
@@ -236,7 +226,7 @@ class Pidfile:
             rfh.close()
 
 
-PIDFile = Pidfile  # noqa: E305 XXX compat alias
+PIDFile = Pidfile  # XXX compat alias
 
 
 def create_pidlock(pidfile):
@@ -581,6 +571,14 @@ def _setuid(uid, gid):
             'non-root user able to restore privileges after setuid.')
 
 
+if hasattr(_signal, 'setitimer'):
+    def _arm_alarm(seconds):
+        _signal.setitimer(_signal.ITIMER_REAL, seconds)
+else:
+    def _arm_alarm(seconds):
+        _signal.alarm(math.ceil(seconds))
+
+
 class Signals:
     """Convenience interface to :mod:`signals`.
 
@@ -619,21 +617,8 @@ class Signals:
     ignored = _signal.SIG_IGN
     default = _signal.SIG_DFL
 
-    if hasattr(_signal, 'setitimer'):
-
-        def arm_alarm(self, seconds):
-            _signal.setitimer(_signal.ITIMER_REAL, seconds)
-    else:  # pragma: no cover
-        try:
-            from itimer import alarm as _itimer_alarm  # noqa
-        except ImportError:
-
-            def arm_alarm(self, seconds):  # noqa
-                _signal.alarm(math.ceil(seconds))
-        else:  # pragma: no cover
-
-            def arm_alarm(self, seconds):  # noqa
-                return _itimer_alarm(seconds)  # noqa
+    def arm_alarm(self, seconds):
+        return _arm_alarm(seconds)
 
     def reset_alarm(self):
         return _signal.alarm(0)
@@ -713,6 +698,16 @@ def strargv(argv):
     return ''
 
 
+def set_pdeathsig(name):
+    """Sends signal ``name`` to process when parent process terminates."""
+    if signals.supported('SIGKILL'):
+        try:
+            _set_pdeathsig(signals.signum('SIGKILL'))
+        except OSError:
+            # We ignore when OS does not support set_pdeathsig
+            pass
+
+
 def set_process_title(progname, info=None):
     """Set the :command:`ps` name for the currently running process.
 
@@ -731,7 +726,7 @@ if os.environ.get('NOSETPS'):  # pragma: no cover
         """Disabled feature."""
 else:
 
-    def set_mp_process_title(progname, info=None, hostname=None):  # noqa
+    def set_mp_process_title(progname, info=None, hostname=None):
         """Set the :command:`ps` name from the current process name.
 
         Only works if :pypi:`setproctitle` is installed.

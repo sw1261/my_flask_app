@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, request, render_template, jsonify, redirect, url_for, make_response
 import openai
 import os

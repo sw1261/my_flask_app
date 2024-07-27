@@ -136,17 +136,17 @@ class Inspect:
     def active(self, safe=None):
         """Return list of tasks currently executed by workers.
 
+        Arguments:
+            safe (Boolean): Set to True to disable deserialization.
+
         Returns:
             Dict: Dictionary ``{HOSTNAME: [TASK_INFO,...]}``.
 
         See Also:
             For ``TASK_INFO`` details see :func:`query_task` return value.
 
-        Note:
-            ``safe`` is ignored since 4.0 as no objects will need
-            serialization now that we have argsrepr/kwargsrepr.
         """
-        return self._request('active')
+        return self._request('active', safe=safe)
 
     def scheduled(self, safe=None):
         """Return list of scheduled tasks with details.
@@ -499,6 +499,41 @@ class Control:
             'signal': signal,
         }, **kwargs)
 
+    def revoke_by_stamped_headers(self, headers, destination=None, terminate=False,
+                                  signal=TERM_SIGNAME, **kwargs):
+        """
+        Tell all (or specific) workers to revoke a task by headers.
+
+        If a task is revoked, the workers will ignore the task and
+        not execute it after all.
+
+        Arguments:
+            headers (dict[str, Union(str, list)]): Headers to match when revoking tasks.
+            terminate (bool): Also terminate the process currently working
+                on the task (if any).
+            signal (str): Name of signal to send to process if terminate.
+                Default is TERM.
+
+        See Also:
+            :meth:`broadcast` for supported keyword arguments.
+        """
+        result = self.broadcast('revoke_by_stamped_headers', destination=destination, arguments={
+            'headers': headers,
+            'terminate': terminate,
+            'signal': signal,
+        }, **kwargs)
+
+        task_ids = set()
+        if result:
+            for host in result:
+                for response in host.values():
+                    task_ids.update(response['ok'])
+
+        if task_ids:
+            return self.revoke(list(task_ids), destination=destination, terminate=terminate, signal=signal, **kwargs)
+        else:
+            return result
+
     def terminate(self, task_id,
                   destination=None, signal=TERM_SIGNAME, **kwargs):
         """Tell all (or specific) workers to terminate a task by id (or list of ids).
@@ -536,7 +571,7 @@ class Control:
             task_name (str): Name of task to change rate limit for.
             rate_limit (int, str): The rate limit as tasks per second,
                 or a rate limit string (`'100/m'`, etc.
-                see :attr:`celery.task.base.Task.rate_limit` for
+                see :attr:`celery.app.task.Task.rate_limit` for
                 more information).
 
         See Also:

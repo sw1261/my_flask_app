@@ -18,9 +18,7 @@ from celery import signals
 from celery._state import get_current_task
 from celery.exceptions import CDeprecationWarning, CPendingDeprecationWarning
 from celery.local import class_property
-from celery.platforms import isatty
-from celery.utils.log import (ColorFormatter, LoggingProxy, get_logger,
-                              get_multiprocessing_logger, mlevel,
+from celery.utils.log import (ColorFormatter, LoggingProxy, get_logger, get_multiprocessing_logger, mlevel,
                               reset_multiprocessing_logger)
 from celery.utils.nodenames import node_format
 from celery.utils.term import colored
@@ -41,7 +39,7 @@ class TaskFormatter(ColorFormatter):
         else:
             record.__dict__.setdefault('task_name', '???')
             record.__dict__.setdefault('task_id', '???')
-        return ColorFormatter.format(self, record)
+        return super().format(record)
 
 
 class Logging:
@@ -65,9 +63,8 @@ class Logging:
         handled = self.setup_logging_subsystem(
             loglevel, logfile, colorize=colorize, hostname=hostname,
         )
-        if not handled:
-            if redirect_stdouts:
-                self.redirect_stdouts(redirect_level)
+        if not handled and redirect_stdouts:
+            self.redirect_stdouts(redirect_level)
         os.environ.update(
             CELERY_LOG_LEVEL=str(loglevel) if loglevel else '',
             CELERY_LOG_FILE=str(logfile) if logfile else '',
@@ -206,7 +203,7 @@ class Logging:
         if colorize or colorize is None:
             # Only use color if there's no active log file
             # and stderr is an actual terminal.
-            return logfile is None and isatty(sys.stderr)
+            return logfile is None and sys.stderr.isatty()
         return colorize
 
     def colored(self, logfile=None, enabled=None):
@@ -245,6 +242,6 @@ class Logging:
     def already_setup(self):
         return self._setup
 
-    @already_setup.setter  # noqa
+    @already_setup.setter
     def already_setup(self, was_setup):
         self._setup = was_setup

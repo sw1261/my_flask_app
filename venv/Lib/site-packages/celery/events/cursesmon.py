@@ -273,8 +273,6 @@ class CursesMonitor:  # pragma: no cover
                         nexty = next(y)
                         if nexty >= my - 1:
                             subline = ' ' * 4 + '[...]'
-                        elif nexty >= my:
-                            break
                         self.win.addstr(
                             nexty, 3,
                             abbr(' ' * 4 + subline, self.screen_width - 4),
@@ -483,7 +481,7 @@ class DisplayThread(threading.Thread):  # pragma: no cover
     def __init__(self, display):
         self.display = display
         self.shutdown = False
-        threading.Thread.__init__(self)
+        super().__init__()
 
     def run(self):
         while not self.shutdown:
