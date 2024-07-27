@@ -9,7 +9,7 @@ import logging
 from dotenv import load_dotenv
 from fpdf import FPDF, HTMLMixin
 import time
-from celery_worker import make_celery
+from celery import Celery
 import requests
 from mytasks import process_idea  # Import the task
 
@@ -22,6 +22,16 @@ app.config.update(
     CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
     CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 )
+
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        broker=app.config['CELERY_BROKER_URL'],
+        backend=app.config['CELERY_RESULT_BACKEND']
+    )
+    celery.conf.update(app.config)
+    return celery
+
 celery = make_celery(app)
 celery.conf.update(
     broker_url=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
