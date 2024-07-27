@@ -8,8 +8,8 @@ import mytasks  # Import the tasks module
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=os.getenv('result_backend', 'redis://localhost:6379/0'),
-        broker=os.getenv('broker_url', 'redis://localhost:6379/0')
+        backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+        broker=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
     )
     celery.conf.update(app.config)
     return celery
@@ -18,8 +18,8 @@ class FakeApp:
     name = 'fake_app'
     import_name = name
     config = {
-        'broker_url': os.getenv('broker_url', 'redis://localhost:6379/0'),
-        'result_backend': os.getenv('result_backend', 'redis://localhost:6379/0')
+        'broker_url': os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+        'result_backend': os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
     }
 
 app = FakeApp()

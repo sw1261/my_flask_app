@@ -13,10 +13,10 @@ from celery_worker import make_celery
 import requests
 from mytasks import process_idea  # Import the task
 
-# 환경변수 로드
+# Load environment variables
 load_dotenv()
 
-# Flask 애플리케이션 설정
+# Flask application setup
 app = Flask(__name__)
 app.config.update(
     broker_url=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
@@ -26,13 +26,13 @@ celery = make_celery(app)
 celery.conf.update(app.config)
 celery.conf.task_default_queue = 'default'
 
-# OpenAI API 키 설정
+# OpenAI API key setup
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 로깅 설정
+# Logging setup
 logging.basicConfig(level=logging.DEBUG)
 
-# PDF 클래스 정의
+# Define PDF class
 class MyFPDF(FPDF, HTMLMixin):
     def header(self):
         self.set_font('Arial', 'B', 12)
@@ -53,25 +53,25 @@ class MyFPDF(FPDF, HTMLMixin):
         self.chapter_title(title)
         self.chapter_body(body)
 
-# 홈 페이지 라우트
+# Home page route
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# 아이디어 검증 라우트
+# Validate idea route
 @app.route('/validate_idea', methods=['POST'])
 def validate_idea():
     idea = request.form['idea']
     task = process_idea.apply_async(args=[idea])  # Call the task
     return redirect(url_for('loading', task_id=task.id))
 
-# 로딩 페이지 라우트
+# Loading page route
 @app.route('/loading')
 def loading():
     task_id = request.args.get('task_id')
     return render_template('loading.html', task_id=task_id)
 
-# 작업 상태 조회 라우트
+# Process status route
 @app.route('/process/<task_id>', methods=['POST', 'GET'])
 def process(task_id):
     task = process_idea.AsyncResult(task_id)
@@ -83,7 +83,7 @@ def process(task_id):
         logging.debug(f"Current task state: {task.state}")
         return jsonify({'state': task.state})
 
-# 결과 렌더링 라우트
+# Result rendering route
 @app.route('/result', methods=['POST'])
 def result():
     try:
@@ -95,7 +95,7 @@ def result():
         logging.error(f"Error rendering result: {e}")
         return jsonify({"error": f"Error rendering result: {str(e)}"}), 500
 
-# PDF 다운로드 라우트
+# PDF download route
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
     try:
@@ -116,13 +116,13 @@ def download_pdf():
         logging.error(f"Error generating PDF: {e}")
         return jsonify({"error": f"Error generating PDF: {str(e)}"}), 500
 
-# OpenAI API 키 테스트 라우트
+# OpenAI API key test route
 @app.route('/test_api_key')
 def test_api_key():
     api_key = os.getenv("OPENAI_API_KEY")
     return jsonify({"api_key": api_key})
 
-# Celery 작업 정의
+# Celery task definition
 @celery.task(name="mytasks.process_idea")
 def process_idea(idea):
     logging.debug(f"Idea received: {idea}")
@@ -204,6 +204,6 @@ def process_idea(idea):
 
     return {"result": html_result, "idea": idea}
 
-# Flask 애플리케이션 실행
+# Run Flask application
 if __name__ == '__main__':
     app.run(debug=True)

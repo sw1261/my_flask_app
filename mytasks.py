@@ -1,12 +1,12 @@
-from flask import Flask
 from celery import Celery
+from flask import Flask
 
-app = Flask(__name__)
-celery = Celery(app.name, broker='redis://localhost:6379/0')
+app = Flask(__name__)  # Create Flask app
+celery = Celery('mytasks', broker='redis://localhost:6379/0', backend='redis://localhost:6379/0')
 
 @celery.task(name="mytasks.process_idea")
 def process_idea(idea):
-    with app.app_context():
+    with app.app_context():  # Set Flask application context
         print(f"Processing idea: {idea}")
-        # 추가 로직 작성
+        # Add additional logic here
         return idea
