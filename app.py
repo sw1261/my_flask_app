@@ -19,12 +19,13 @@ load_dotenv()
 # Flask application setup
 app = Flask(__name__)
 app.config.update(
-    broker_url=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
-    result_backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+    CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 )
 celery = make_celery(app)
 celery.conf.update(app.config)
 celery.conf.task_default_queue = 'default'
+celery.conf.broker_connection_retry_on_startup = True  # Add this line
 
 # OpenAI API key setup
 openai.api_key = os.getenv("OPENAI_API_KEY")

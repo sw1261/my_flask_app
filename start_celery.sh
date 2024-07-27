@@ -1,4 +1,3 @@
-#!/bin/bash
+#!/bin/sh
 
-# Start Celery worker
-celery -A celery_worker.celery worker --loglevel=info -P eventlet
+celery -A app.celery worker --loglevel=info

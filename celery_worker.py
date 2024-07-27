@@ -12,6 +12,7 @@ def make_celery(app):
         broker=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
     )
     celery.conf.update(app.config)
+    celery.conf.broker_connection_retry_on_startup = True  # Add this line
     return celery
 
 class FakeApp:
