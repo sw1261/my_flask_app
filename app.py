@@ -11,7 +11,6 @@ from fpdf import FPDF, HTMLMixin
 import time
 from celery import Celery
 import requests
-from mytasks import process_idea  # Import the task
 
 # Load environment variables
 load_dotenv()
@@ -19,23 +18,23 @@ load_dotenv()
 # Flask application setup
 app = Flask(__name__)
 app.config.update(
-    CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
-    CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    broker_url=os.getenv('CELERY_BROKER_URL', 'redis://125.251.106.118:6379/0'),
+    result_backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://125.251.106.118:6379/0')
 )
 
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        broker=app.config['CELERY_BROKER_URL'],
-        backend=app.config['CELERY_RESULT_BACKEND']
+        broker=app.config['broker_url'],
+        backend=app.config['result_backend']
     )
     celery.conf.update(app.config)
     return celery
 
 celery = make_celery(app)
 celery.conf.update(
-    broker_url=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
-    result_backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+    broker_url=os.getenv('CELERY_BROKER_URL', 'redis://125.251.106.118:6379/0'),
+    result_backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://125.251.106.118:6379/0'),
     broker_connection_retry_on_startup=True  # Add this line
 )
 celery.conf.task_default_queue = 'default'
